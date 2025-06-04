@@ -673,77 +673,110 @@ elif st.session_state.page == "Визуализации":
                     unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-# Страница 4: Предсказание
+# Страница 4: Предсказания
 elif st.session_state.page == "Предсказания":
     st.title("🔥 Предсказание срабатывания пожарной сигнализации")
 
     # Стили
     st.markdown("""
     <style>
-    .prediction-card {
+    .model-card {
         background-color: #ffffff;
         border-radius: 15px;
-        padding: 25px;
-        margin-bottom: 25px;
-        box-shadow: 0 8px 20px rgba(0,0,0,0.08);
-    }
-    .input-section {
-        background: linear-gradient(135deg, #f5f7fa 0%, #e3e8f7 100%);
-        border-radius: 12px;
-        padding: 20px;
-        margin-bottom: 25px;
-    }
-    .result-card {
-        background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
-        border-radius: 12px;
-        padding: 25px;
-        text-align: center;
-        box-shadow: 0 6px 16px rgba(0,0,0,0.08);
-        margin-top: 20px;
-    }
-    .fire-alert {
-        font-size: 32px;
-        font-weight: bold;
-        padding: 20px;
-        border-radius: 12px;
-        margin: 20px 0;
-        text-align: center;
-    }
-    .probability-card {
-        background-color: #f8f9fa;
-        border-radius: 12px;
-        padding: 20px;
-        margin-top: 20px;
-    }
-    .model-selector {
-        background-color: #f8f9fa;
-        border-radius: 12px;
         padding: 20px;
         margin-bottom: 20px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
     }
-    .tech-details {
-        background-color: #f8f9fa;
-        border-radius: 12px;
-        padding: 20px;
+    .model-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+    }
+    .model-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #eee;
+    }
+    .model-name {
+        font-size: 18px;
+        font-weight: bold;
+        color: #2c3e50;
+    }
+    .close-btn {
+        background: #ff6b6b;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        font-size: 14px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .models-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 20px;
         margin-top: 20px;
     }
-    .sensor-input {
+    .prediction-chart {
+        margin-top: 20px;
+        padding: 15px;
+        border-radius: 10px;
+        background: #f9f9f9;
+    }
+    .prediction-container {
+        text-align: center;
+        margin: 15px 0;
+    }
+    .prediction-alert {
+        border-radius: 8px;
+        padding: 15px;
+        font-weight: bold;
+        font-size: 18px;
         margin-bottom: 15px;
     }
-    .file-uploader {
-        background-color: #f8f9fa;
-        border-radius: 12px;
-        padding: 20px;
-        margin-top: 20px;
+    .fire-alert {
+        background-color: #ff4b4b30;
+        border: 2px solid #ff4b4b;
+        color: #d63031;
     }
-    .prediction-table {
-        margin-top: 20px;
+    .no-fire-alert {
+        background-color: #2ecc7130;
+        border: 2px solid #2ecc71;
+        color: #27ae60;
     }
-    .prediction-row-fire {
-        background-color: #ffebee !important;
+    .probability-container {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 15px;
     }
-    .prediction-row-no-fire {
-        background-color: #e8f5e9 !important;
+    .probability-box {
+        text-align: center;
+        width: 48%;
+    }
+    .fire-probability {
+        color: #e74c3c;
+    }
+    .no-fire-probability {
+        color: #2ecc71;
+    }
+    .progress-bar-container {
+        margin-top: 15px;
+    }
+    .progress-bar {
+        height: 20px;
+        background: #f0f0f0;
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    .progress-bar-fill {
+        height: 100%;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -753,19 +786,23 @@ elif st.session_state.page == "Предсказания":
     import matplotlib.pyplot as plt
     import numpy as np
     from joblib import load
+    import plotly.express as px
+
 
     @st.cache_resource
     def load_models():
         models = {
             "KNN": load("C:/Users/Zver/Desktop/machine_learning/notebook/models/knn_model.pkl"),
             "Gradient Boosting": load('C:/Users/Zver/Desktop/machine_learning/notebook/models/gb_model.pkl'),
-            "CatBoost": CatBoostClassifier().load_model("C:/Users/Zver/Desktop/machine_learning/notebook/models/catboost_model.cbm"),
+            "CatBoost": CatBoostClassifier().load_model(
+                "C:/Users/Zver/Desktop/machine_learning/notebook/models/catboost_model.cbm"),
             "Bagging": load('C:/Users/Zver/Desktop/machine_learning/notebook/models/bagging_model.pkl'),
             "Stacking": load('C:/Users/Zver/Desktop/machine_learning/notebook/models/stacking_model.pkl'),
-            "Optuna Neural Network": tf.keras.models.load_model(r"C:\Users\Zver\Desktop\machine_learning\notebook\models\optuna_classification_model.h5"
-            )
+            "Optuna Neural Network": tf.keras.models.load_model(
+                r"C:\Users\Zver\Desktop\machine_learning\notebook\models\optuna_classification_model.h5")
         }
         return models
+
 
     @st.cache_resource
     def load_nn_preprocessors():
@@ -810,16 +847,45 @@ elif st.session_state.page == "Предсказания":
         return errors
 
 
-    # Выбор модели
-    st.header("Выбор модели")
-    model_choice = st.selectbox(
-        "Выберите модель для предсказания:",
-        list(models.keys()),
-        index=2
-    )
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.header("Выбор моделей")
 
-    # Выбор способа ввода данных
+    # Инициализация состояния для выбранных моделей
+    if 'selected_models' not in st.session_state:
+        st.session_state.selected_models = list(models.keys())
+
+
+    # Функция для удаления модели из выбранных
+    def remove_model(model_name):
+        if model_name in st.session_state.selected_models:
+            st.session_state.selected_models.remove(model_name)
+            st.rerun()
+
+
+    # Отображение выбранных моделей с кнопками удаления
+    if st.session_state.selected_models:
+        st.markdown("**Выбранные модели:**")
+        cols = st.columns(4)
+        col_idx = 0
+
+        for model_name in st.session_state.selected_models:
+            with cols[col_idx]:
+                with st.container():
+                    st.markdown(f"""
+                    <div class="model-card">
+                        <div class="model-header">
+                            <div class="model-name">{model_name}</div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    if st.button("×", key=f"remove_{model_name}", help="Удалить модель"):
+                        remove_model(model_name)
+            col_idx = (col_idx + 1) % 4
+
+    # Кнопка для выбора всех моделей
+    if st.button("Выбрать все модели", use_container_width=True):
+        st.session_state.selected_models = list(models.keys())
+        st.rerun()
+
     input_method = st.radio(
         "Выберите способ ввода данных:",
         ["Ввести данные вручную", "Загрузить CSV файл"],
@@ -834,6 +900,7 @@ elif st.session_state.page == "Предсказания":
     ]
 
     input_df = pd.DataFrame()
+    full_predictions = None
 
     if input_method == "Ввести данные вручную":
         st.header("Параметры датчиков")
@@ -841,28 +908,22 @@ elif st.session_state.page == "Предсказания":
         col1, col2, col3 = st.columns(3)
 
         with col1:
-            st.markdown('<div class="sensor-input">', unsafe_allow_html=True)
             temperature = st.number_input("Температура (°C)", min_value=-50.0, max_value=100.0, value=20.0)
             humidity = st.number_input("Влажность (%)", min_value=0.0, max_value=100.0, value=50.0)
             tvoc = st.number_input("TVOC (ppb)", min_value=0, max_value=60000, value=500)
             eco2 = st.number_input("eCO2 (ppm)", min_value=400, max_value=60000, value=1000)
-            st.markdown('</div>', unsafe_allow_html=True)
 
         with col2:
-            st.markdown('<div class="sensor-input">', unsafe_allow_html=True)
             raw_h2 = st.number_input("Raw H2", min_value=1, max_value=60000, value=10000)
             raw_ethanol = st.number_input("Raw Ethanol", min_value=1, max_value=60000, value=20000)
             pressure = st.number_input("Давление (гПа)", min_value=800.0, max_value=1200.0, value=1013.25)
             pm25 = st.number_input("PM2.5 (мкг/м³)", min_value=0.1, max_value=1000.0, value=10.0)
-            st.markdown('</div>', unsafe_allow_html=True)
 
         with col3:
-            st.markdown('<div class="sensor-input">', unsafe_allow_html=True)
             pm10 = st.number_input("PM1.0 (мкг/м³)", min_value=0.1, max_value=1000.0, value=5.0)
             nc25 = st.number_input("NC2.5 (#/см³)", min_value=0.1, max_value=1000.0, value=20.0)
             nc05 = st.number_input("NC0.5 (#/см³)", min_value=0.1, max_value=1000.0, value=50.0)
             nc10 = st.number_input("NC1.0 (#/см³)", min_value=0.1, max_value=1000.0, value=30.0)
-            st.markdown('</div>', unsafe_allow_html=True)
 
         input_data = {
             'TVOC[ppb]': [tvoc],
@@ -881,7 +942,6 @@ elif st.session_state.page == "Предсказания":
         input_df = pd.DataFrame(input_data)
 
     else:
-        st.markdown('<div class="file-uploader">', unsafe_allow_html=True)
         st.header("Загрузка данных")
         uploaded_file = st.file_uploader("Загрузите CSV файл с данными", type=["csv"])
 
@@ -891,22 +951,74 @@ elif st.session_state.page == "Предсказания":
                 st.success("Файл успешно загружен!")
                 st.write(f"Загружено строк: {len(input_df)}")
 
+                # Удаление целевой переменной, если она присутствует
+                if 'Fire Alarm' in input_df.columns:
+                    input_df = input_df.drop(columns=['Fire Alarm'])
+                    st.info("Целевая переменная 'Fire Alarm' удалена из данных")
+
                 missing_cols = [col for col in required_columns if col not in input_df.columns]
                 if missing_cols:
                     st.error(f"Отсутствуют необходимые колонки: {', '.join(missing_cols)}")
                     st.stop()
 
+                # Показ предварительного просмотра
                 st.subheader("Предварительный просмотр данных")
                 st.dataframe(input_df.head(3))
 
             except Exception as e:
                 st.error(f"Ошибка при чтении файла: {e}")
-        st.markdown('</div>', unsafe_allow_html=True)
 
-    st.markdown('</div>', unsafe_allow_html=True)
 
-    # Кнопка предсказания
-    if st.button("Выполнить предсказание", use_container_width=True, type="primary") and not input_df.empty:
+    # Функция для выполнения предсказаний
+    def make_predictions(input_data, models_to_use):
+        results = {}
+
+        for model_name in models_to_use:
+            try:
+                model = models[model_name]
+                input_data_for_pred = input_data[required_columns]
+
+                if model_name == "Optuna Neural Network":
+                    scaler, pca = load_nn_preprocessors()
+                    scaled_data = scaler.transform(input_data_for_pred)
+                    pca_data = pca.transform(scaled_data)
+                    input_array = pca_data.astype('float32')
+                    prediction_proba = model.predict(input_array)
+                    predictions = (prediction_proba > 0.5).astype(int).flatten()
+                else:
+                    predictions = model.predict(input_data_for_pred)
+                    if hasattr(model, "predict_proba"):
+                        prediction_proba = model.predict_proba(input_data_for_pred)
+                    else:
+                        # Для моделей без predict_proba
+                        prediction_proba = np.zeros((len(predictions), 2))
+                        for i, pred in enumerate(predictions):
+                            prediction_proba[i, pred] = 1.0
+
+                # Сохраняем результаты
+                if model_name == "Optuna Neural Network":
+                    fire_probs = prediction_proba[:, 0] if prediction_proba.shape[1] == 1 else prediction_proba[:, 1]
+                else:
+                    fire_probs = prediction_proba[:, 1]
+
+                results[model_name] = {
+                    'predictions': predictions,
+                    'fire_probs': fire_probs,
+                    'no_fire_probs': 1 - fire_probs
+                }
+
+            except Exception as e:
+                st.error(f"Ошибка предсказания для модели {model_name}: {str(e)}")
+
+        return results
+
+
+    # Обработка кнопки предсказания
+    if st.button("Выполнить предсказания", use_container_width=True, type="primary") and not input_df.empty:
+        if not st.session_state.selected_models:
+            st.warning("Пожалуйста, выберите хотя бы одну модель")
+            st.stop()
+
         try:
             errors = validate_input(input_df)
             if errors:
@@ -915,127 +1027,170 @@ elif st.session_state.page == "Предсказания":
                     st.error(error)
                 st.stop()
 
-            model = models[model_choice]
-            input_data_for_pred = input_df[required_columns]
+            with st.spinner('Выполняем предсказания... Это может занять несколько минут'):
+                results = make_predictions(input_df, st.session_state.selected_models)
 
+                if input_method == "Ввести данные вручную":
+                    st.markdown("## Результаты предсказаний")
 
-            if model_choice == "Optuna Neural Network":
-                scaler, pca = load_nn_preprocessors()
+                    # Создаем данные для графика
+                    model_names = []
+                    fire_probs = []
+                    no_fire_probs = []
 
+                    for model_name, result in results.items():
+                        prediction = result['predictions'][0]
+                        fire_prob = result['fire_probs'][0] * 100
+                        no_fire_prob = result['no_fire_probs'][0] * 100
 
-                scaled_data = scaler.transform(input_data_for_pred)
-                pca_data = pca.transform(scaled_data)
+                        model_names.append(model_name)
+                        fire_probs.append(fire_prob)
+                        no_fire_probs.append(no_fire_prob)
 
+                        # Отображение карточки с предсказанием
+                        with st.container():
+                            st.markdown(f"""
+                            <div class="model-card">
+                                <div class="model-header">
+                                    <div class="model-name">{model_name}</div>
+                                </div>
 
-                input_array = pca_data.astype('float32')
-                prediction_proba = model.predict(input_array)
-                prediction = (prediction_proba > 0.5).astype(int).flatten()
-            else:
-                prediction = model.predict(input_data_for_pred)
-                if hasattr(model, "predict_proba"):
-                    prediction_proba = model.predict_proba(input_data_for_pred)
-                else:
+                                <div class="prediction-container">
+                                    <div class="prediction-alert {'fire-alert' if prediction == 1 else 'no-fire-alert'}">
+                                        {'ПОЖАР!' if prediction == 1 else 'Нет пожара'}
+                                    </div>
+                                </div>
 
-                    prediction_proba = np.zeros((len(prediction), 2))
-                    for i, pred in enumerate(prediction):
-                        prediction_proba[i, pred] = 1.0
+                                <div class="probability-container">
+                                    <div class="probability-box">
+                                        <div style="font-weight: bold;" class="fire-probability">Вероятность пожара</div>
+                                        <div style="font-size: 24px; font-weight: bold;" class="fire-probability">
+                                            {fire_prob:.2f}%
+                                        </div>
+                                    </div>
+                                    <div class="probability-box">
+                                        <div style="font-weight: bold;" class="no-fire-probability">Вероятность отсутствия</div>
+                                        <div style="font-size: 24px; font-weight: bold;" class="no-fire-probability">
+                                            {no_fire_prob:.2f}%
+                                        </div>
+                                    </div>
+                                </div>
 
+                                <div class="progress-bar-container">
+                                    <div class="progress-bar">
+                                        <div class="progress-bar-fill" style="width: {fire_prob}%; background: #e74c3c;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            """, unsafe_allow_html=True)
 
-            if input_method == "Ввести данные вручную":
-                st.markdown('<div class="result-card">', unsafe_allow_html=True)
-                st.subheader(f"Результат предсказания ({model_choice})")
+                    # Визуализация результатов всех моделей на одном графике
+                    st.markdown("## Сравнение результатов моделей")
 
-                # Отображение результата
-                result = "ПОЖАР!" if prediction[0] == 1 else "Нет пожара"
-                color = "#ff4b4b" if prediction[0] == 1 else "#2ecc71"
-                st.markdown(
-                    f'<div class="fire-alert" style="background-color: {color}30; border: 2px solid {color};">{result}</div>',
-                    unsafe_allow_html=True)
+                    # Создаем DataFrame для графика
+                    df_plot = pd.DataFrame({
+                        'Модель': model_names,
+                        'Вероятность пожара (%)': fire_probs,
+                        'Вероятность отсутствия (%)': no_fire_probs
+                    })
 
-                st.markdown('<div class="probability-card">', unsafe_allow_html=True)
-                st.subheader("Вероятности")
+                    # Преобразуем данные для Plotly
+                    df_melted = df_plot.melt(id_vars='Модель',
+                                             value_vars=['Вероятность пожара (%)', 'Вероятность отсутствия (%)'],
+                                             var_name='Тип вероятности',
+                                             value_name='Процент')
 
-                if model_choice == "Optuna Neural Network":
-                    fire_prob = prediction_proba[0][0] if prediction[0] == 1 else prediction_proba[0][0]
-                    no_fire_prob = 1 - fire_prob
-                else:
-                    fire_prob = prediction_proba[0][1]
-                    no_fire_prob = prediction_proba[0][0]
+                    # Создаем интерактивный график
+                    fig = px.bar(df_melted,
+                                 x='Модель',
+                                 y='Процент',
+                                 color='Тип вероятности',
+                                 barmode='group',
+                                 color_discrete_map={
+                                     'Вероятность пожара (%)': '#e74c3c',
+                                     'Вероятность отсутствия (%)': '#2ecc71'
+                                 },
+                                 height=500)
 
-                fig, ax = plt.subplots(figsize=(10, 3))
-                bars = ax.barh(['Вероятность пожара', 'Вероятность отсутствия пожара'],
-                               [fire_prob, no_fire_prob],
-                               color=['#e74c3c', '#2ecc71'])
+                    fig.update_layout(
+                        title='Сравнение вероятностей предсказаний',
+                        xaxis_title='Модель',
+                        yaxis_title='Вероятность (%)',
+                        legend_title='Тип вероятности',
+                        hovermode='x'
+                    )
 
-                ax.set_xlim(0, 1)
-                ax.set_title('Распределение вероятностей', fontsize=14)
-                ax.bar_label(bars, fmt='%.2f%%', padding=3, fontsize=12)
-                ax.spines['top'].set_visible(False)
-                ax.spines['right'].set_visible(False)
-                ax.spines['bottom'].set_visible(False)
-                ax.spines['left'].set_visible(False)
-                ax.tick_params(axis='y', which='major', labelsize=12)
+                    st.plotly_chart(fig, use_container_width=True)
 
-                st.pyplot(fig)
-                st.markdown('</div>', unsafe_allow_html=True)
+                else:  # Для загруженного файла
+                    result_df = input_df.copy()
 
-                with st.expander("Технические детали", expanded=False):
-                    st.write(f"**Использованные признаки:**\n{', '.join(required_columns)}")
+                    for model_name, result in results.items():
+                        result_df[f'{model_name}_prediction'] = result['predictions']
+                        result_df[f'{model_name}_fire_prob'] = result['fire_probs']
+                        result_df[f'{model_name}_no_fire_prob'] = result['no_fire_probs']
 
-                    if model_choice == "Optuna Neural Network":
-                        st.subheader("Архитектура нейронной сети")
-                        from io import StringIO
-                        import sys
+                    st.success("Предсказания успешно выполнены!")
+                    st.write(f"Всего записей: {len(result_df)}")
 
-                        buffer = StringIO()
-                        sys.stdout = buffer
-                        model.summary()
-                        sys.stdout = sys.__stdout__
-                        model_summary = buffer.getvalue()
+                    # Показ первых 10 строк
+                    st.subheader("Первые 10 предсказаний")
+                    st.dataframe(result_df.head(10))
 
-                        st.text(model_summary)
+                    # Визуализация распределения предсказаний
+                    st.subheader("Распределение предсказаний")
 
-                st.markdown('</div>', unsafe_allow_html=True)
+                    # Создаем DataFrame для визуализации
+                    prediction_counts = {}
+                    for model_name in st.session_state.selected_models:
+                        counts = result_df[f'{model_name}_prediction'].value_counts().to_dict()
+                        prediction_counts[model_name] = {
+                            'Пожар': counts.get(1, 0),
+                            'Нет пожара': counts.get(0, 0)
+                        }
 
-            else:
-                st.markdown('<div class="result-card">', unsafe_allow_html=True)
-                st.subheader(f"Результаты предсказаний ({model_choice})")
+                    df_counts = pd.DataFrame(prediction_counts).T.reset_index()
+                    df_counts = df_counts.rename(columns={'index': 'Модель'})
+                    df_melted = df_counts.melt(id_vars='Модель',
+                                               value_vars=['Пожар', 'Нет пожара'],
+                                               var_name='Предсказание',
+                                               value_name='Количество')
 
+                    # Создаем интерактивный график
+                    fig = px.bar(df_melted,
+                                 x='Модель',
+                                 y='Количество',
+                                 color='Предсказание',
+                                 barmode='group',
+                                 color_discrete_map={
+                                     'Пожар': '#e74c3c',
+                                     'Нет пожара': '#2ecc71'
+                                 },
+                                 height=500)
 
-                input_df['Предсказание'] = prediction
-                input_df['Предсказание'] = input_df['Предсказание'].map({1: 'Пожар', 0: 'Нет пожара'})
+                    fig.update_layout(
+                        title='Количество предсказаний по моделям',
+                        xaxis_title='Модель',
+                        yaxis_title='Количество предсказаний',
+                        legend_title='Тип предсказания',
+                        hovermode='x'
+                    )
 
-                if model_choice == "Optuna Neural Network":
-                    input_df['Вероятность пожара'] = prediction_proba[:, 0] if prediction_proba.shape[
-                                                                                   1] == 1 else prediction_proba[:, 1]
-                else:
-                    input_df['Вероятность пожара'] = prediction_proba[:, 1]
+                    st.plotly_chart(fig, use_container_width=True)
 
-                input_df['Вероятность отсутствия пожара'] = 1 - input_df['Вероятность пожара']
-
-                st.write(f"Всего записей: {len(input_df)}")
-                st.write(f"Срабатываний сигнализации: {sum(prediction)}")
-
-                def row_style(row):
-                    styles = []
-                    if row['Предсказание'] == 'Пожар':
-                        styles.append('background-color: #ffebee')
-                    else:
-                        styles.append('background-color: #e8f5e9')
-                    return styles
-
-
-                st.subheader("Результаты предсказаний")
-                st.dataframe(
-                    input_df.style.apply(row_style, axis=1),
-                    use_container_width=True,
-                    height=400
-                )
+                    # Кнопка для скачивания полных результатов
+                    csv = result_df.to_csv(index=False).encode('utf-8')
+                    st.download_button(
+                        label="Скачать все предсказания (CSV)",
+                        data=csv,
+                        file_name='predictions_results.csv',
+                        mime='text/csv',
+                        use_container_width=True
+                    )
 
         except Exception as e:
-            st.error(f"Ошибка предсказания: {str(e)}")
-            st.error("Убедитесь, что все необходимые признаки присутствуют в данных и имеют правильный формат.")
+            st.error(f"Ошибка выполнения предсказаний: {str(e)}")
     elif input_df.empty:
-        st.warning("Пожалуйста, введите данные или загрузите файл для выполнения предсказания.")
+        st.warning("Пожалуйста, введите данные для выполнения предсказания")
 # streamlit run app.py
 
